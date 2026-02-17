@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: agrocoredados
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: agrocoredados
+
+  template:
+    metadata:
+      labels:
+        app: agrocoredados
+
+    spec:
+      containers:
+        - name: agrocoredados
+          image: euturial/agrocoredados:latest
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8080
