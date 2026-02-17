@@ -1,12 +1,12 @@
+# =========================
+# DEPLOYMENT
+# =========================
 apiVersion: apps/v1
 kind: Deployment
-
 metadata:
   name: agrocoredados
-
 spec:
   replicas: 1
-
   selector:
     matchLabels:
       app: agrocoredados
@@ -20,8 +20,52 @@ spec:
       containers:
         - name: agrocoredados
           image: euturial/agrocoredados:latest
-
           imagePullPolicy: Always
 
           ports:
             - containerPort: 8080
+
+---
+# =========================
+# SERVICE (ClusterIP)
+# =========================
+apiVersion: v1
+kind: Service
+metadata:
+  name: agrocoredados
+spec:
+  type: ClusterIP
+
+  selector:
+    app: agrocoredados
+
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+
+---
+# =========================
+# INGRESS
+# =========================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agrocoredados-ingress
+
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agrocoredados
+                port:
+                  number: 80
