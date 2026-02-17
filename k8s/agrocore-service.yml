@@ -5,12 +5,12 @@ metadata:
   name: agrocoredados-service
 
 spec:
-  type: NodePort
+  type: ClusterIP
 
   selector:
     app: agrocoredados
 
   ports:
-    - port: 80
+    - protocol: TCP
+      port: 80
       targetPort: 8080
-      nodePort: 30007
