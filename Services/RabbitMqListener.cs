@@ -61,6 +61,7 @@ namespace APIAgroCoreDados.Services
                         && commandEl.GetString() == "create"
                         && root.TryGetProperty("data", out var dataEl))
                     {
+                        var idUsers = dataEl.GetProperty("idUsers").GetInt32();
                         var nome = dataEl.GetProperty("nome").GetString();
                         var area = dataEl.GetProperty("area").GetDouble();
 
@@ -69,6 +70,7 @@ namespace APIAgroCoreDados.Services
 
                         var prop = new Propriedade
                         {
+                            IdUsers = idUsers,
                             Nome = nome ?? string.Empty,
                             Area = area
                         };
