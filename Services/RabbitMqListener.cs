@@ -74,7 +74,7 @@ namespace APIAgroCoreDados.Services
                             Nome = nome ?? string.Empty,
                             Area = area
                         };
-
+                        Console.WriteLine($"Criando propriedade: IdUsers={idUsers}, Nome={nome}, Area={area}");
                         db.Propriedade.Add(prop);
                         await db.SaveChangesAsync(stoppingToken);
                     }
