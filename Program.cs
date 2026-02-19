@@ -1,12 +1,21 @@
-var builder = WebApplication.CreateBuilder(args);
+using APIAgroCoreDados.Data;
+using APIAgroCoreDados.Services;
+using Microsoft.EntityFrameworkCore;
 
-// Add services to the container.
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-var app = builder.Build();
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseMySql(connectionString, Microsoft.EntityFrameworkCore.ServerVersion.AutoDetect(connectionString));
+});
 
-// Configure the HTTP request pipeline.
+builder.Services.AddSingleton<RabbitMqService>();
+builder.Services.AddHostedService<RabbitMqListener>();
+
+var app = builder.Build();
 
 app.UseHttpsRedirection();
 
