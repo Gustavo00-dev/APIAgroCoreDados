@@ -73,7 +73,7 @@ namespace APIAgroCoreDados.Services
                             Area = area
                         };
 
-                        db.Propriedades.Add(prop);
+                        db.Propriedade.Add(prop);
                         await db.SaveChangesAsync(stoppingToken);
                     }
 

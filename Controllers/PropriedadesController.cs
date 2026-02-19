@@ -25,7 +25,7 @@ namespace APIAgroCoreDados.Controllers
         {
             try
             {
-                var propriedades = await _context.Propriedades
+                var propriedades = await _context.Propriedade
                     .Where(p => p.IdUsers == Id)
                     .ToListAsync();
 

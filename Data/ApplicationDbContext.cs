@@ -9,7 +9,7 @@ namespace APIAgroCoreDados.Data
         {
 
         }
-        public DbSet<Propriedade> Propriedades { get; set; }
+        public DbSet<Propriedade> Propriedade { get; set; }
         public DbSet<Sensor> Sensor { get; set; }
         public DbSet<Talhao> Talhao { get; set; }
 
