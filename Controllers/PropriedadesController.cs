@@ -13,13 +13,16 @@ namespace APIAgroCoreDados.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        // Injeta o ApplicationDbContext para acessar o banco MySQL
         public PropriedadesController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // Busca todas as propriedades cujo IdUsers seja igual ao Id informado
+        /// <summary>
+        /// Buscar propriedades associadas a um usuário específico, utilizando o Id do usuário como parâmetro de consulta.
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <returns></returns>
         [HttpGet("BuscarPropriedades")]
         public async Task<IActionResult> BuscarPropriedades([FromQuery] int Id)
         {

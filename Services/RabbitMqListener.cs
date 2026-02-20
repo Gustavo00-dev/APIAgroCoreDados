@@ -15,7 +15,8 @@ namespace APIAgroCoreDados.Services
         private IConnection? _connection;
         private IChannel? _channel;
 
-        private const string QueueName = "queue.propriedade.command";
+        private const string QueuePropriedade = "queue.propriedade.command";
+        private const string QueueTalhao = "queue.talhao.command";
 
         public RabbitMqListener(RabbitMqService rabbit, IServiceScopeFactory scopeFactory)
         {
@@ -29,7 +30,14 @@ namespace APIAgroCoreDados.Services
             _channel = await _connection.CreateChannelAsync();
 
             await _channel.QueueDeclareAsync(
-                queue: QueueName,
+                queue: QueuePropriedade,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+
+            await _channel.QueueDeclareAsync(
+                queue: QueueTalhao,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
@@ -44,10 +52,11 @@ namespace APIAgroCoreDados.Services
         {
             if (_channel == null)
                 return;
+          
+            #region Consumer de Propriedade
+            var consumerProp = new AsyncEventingBasicConsumer(_channel);
 
-            var consumer = new AsyncEventingBasicConsumer(_channel);
-
-            consumer.ReceivedAsync += async (sender, ea) =>
+            consumerProp.ReceivedAsync += async (sender, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var json = Encoding.UTF8.GetString(body);
@@ -74,7 +83,7 @@ namespace APIAgroCoreDados.Services
                             Nome = nome ?? string.Empty,
                             Area = area
                         };
-                        Console.WriteLine($"Criando propriedade: IdUsers={idUsers}, Nome={nome}, Area={area}");
+
                         db.Propriedade.Add(prop);
                         await db.SaveChangesAsync(stoppingToken);
                     }
@@ -86,11 +95,64 @@ namespace APIAgroCoreDados.Services
                     await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
                 }
             };
+            #endregion
+
+            #region Consumer de Talhoes
+            var consumerTalhao = new AsyncEventingBasicConsumer(_channel);
+
+            consumerTalhao.ReceivedAsync += async (sender, ea) =>
+            {
+                var body = ea.Body.ToArray();
+                var json = Encoding.UTF8.GetString(body);
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("command", out var commandEl)
+                        && commandEl.GetString() == "create"
+                        && root.TryGetProperty("data", out var dataEl))
+                    {
+                        var idPropriedade = dataEl.GetProperty("propriedadeId").GetInt32();
+                        var nome = dataEl.GetProperty("Nome").GetString();
+                        var area = dataEl.GetProperty("Area").GetDouble();
+                        var descricao = dataEl.GetProperty("Descricao").GetString();
+
+                        using var scope = _scopeFactory.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                        var talhao = new Talhao
+                        {
+                            IdPropriedade = idPropriedade,
+                            Nome = nome ?? string.Empty,
+                            Area = area,
+                            Descricao = descricao ?? string.Empty
+                        };
+
+                        db.Talhao.Add(talhao);
+                        await db.SaveChangesAsync(stoppingToken);
+                    }
+
+                    await _channel.BasicAckAsync(ea.DeliveryTag, false);
+                }
+                catch
+                {
+                    await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
+                }
+            };
+            #endregion
+
 
             await _channel.BasicConsumeAsync(
-                queue: QueueName,
+                queue: QueuePropriedade,
                 autoAck: false,
-                consumer: consumer);
+                consumer: consumerProp);
+
+            await _channel.BasicConsumeAsync(
+                queue: QueueTalhao,
+                autoAck: false,
+                consumer: consumerTalhao);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
