@@ -129,9 +129,10 @@ namespace APIAgroCoreDados.Services
                             Area = area,
                             Descricao = descricao ?? string.Empty
                         };
-
+                        Console.WriteLine($"Criando talhão: {talhao.Nome} para propriedade ID {talhao.IdPropriedade}");
                         db.Talhao.Add(talhao);
                         await db.SaveChangesAsync(stoppingToken);
+                        Console.WriteLine($"Talhão criado com ID: {talhao.IdTalhao}");
                     }
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, false);
