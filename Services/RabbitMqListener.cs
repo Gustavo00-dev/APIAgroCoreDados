@@ -90,8 +90,9 @@ namespace APIAgroCoreDados.Services
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, false);
                 }
-                catch
+                catch(Exception ex)
                 {
+                    Console.WriteLine($"Erro ao processar Propriedade: {ex}");
                     await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
                 }
             };
@@ -115,9 +116,9 @@ namespace APIAgroCoreDados.Services
                         && root.TryGetProperty("data", out var dataEl))
                     {
                         var idPropriedade = dataEl.GetProperty("propriedadeId").GetInt32();
-                        var nome = dataEl.GetProperty("Nome").GetString();
-                        var area = dataEl.GetProperty("Area").GetDouble();
-                        var descricao = dataEl.GetProperty("Descricao").GetString();
+                        var nome = dataEl.GetProperty("nome").GetString();
+                        var area = dataEl.GetProperty("area").GetDouble();
+                        var descricao = dataEl.GetProperty("descricao").GetString();
 
                         using var scope = _scopeFactory.CreateScope();
                         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -137,8 +138,9 @@ namespace APIAgroCoreDados.Services
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, false);
                 }
-                catch
+                catch(Exception ex)
                 {
+                    Console.WriteLine($"Erro ao processar Talhão: {ex}");
                     await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
                 }
             };
