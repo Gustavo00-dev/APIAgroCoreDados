@@ -40,10 +40,29 @@ spec:
     app: agrocoredados
 
   ports:
-    - protocol: TCP
+    - name: http
       port: 80
+      protocol: TCP
       targetPort: 8080
 
+---
+# =========================
+# SERVICEMONITOR
+# =========================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-agrocoredados-monitor
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: agrocoredados
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
 ---
 # =========================
 # INGRESS
