@@ -17,6 +17,7 @@ namespace APIAgroCoreDados.Services
 
         private const string QueuePropriedade = "queue.propriedade.command";
         private const string QueueTalhao = "queue.talhao.command";
+        private const string QueueSensores = "queue.sensores.command";
 
         public RabbitMqListener(RabbitMqService rabbit, IServiceScopeFactory scopeFactory)
         {
@@ -43,6 +44,13 @@ namespace APIAgroCoreDados.Services
                 autoDelete: false,
                 arguments: null);
 
+            await _channel.QueueDeclareAsync(
+                queue: QueueSensores,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+
             await _channel.BasicQosAsync(0, 1, false);
 
             await base.StartAsync(cancellationToken);
@@ -52,7 +60,7 @@ namespace APIAgroCoreDados.Services
         {
             if (_channel == null)
                 return;
-          
+
             #region Consumer de Propriedade
             var consumerProp = new AsyncEventingBasicConsumer(_channel);
 
@@ -90,7 +98,7 @@ namespace APIAgroCoreDados.Services
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, false);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Console.WriteLine($"Erro ao processar Propriedade: {ex}");
                     await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
@@ -138,7 +146,7 @@ namespace APIAgroCoreDados.Services
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, false);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Console.WriteLine($"Erro ao processar Talhão: {ex}");
                     await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
@@ -146,7 +154,68 @@ namespace APIAgroCoreDados.Services
             };
             #endregion
 
+            #region Consumer de Sensores
+            var consumerSensores = new AsyncEventingBasicConsumer(_channel);
+            consumerSensores.ReceivedAsync += async (sender, ea) =>
+            {
+                var body = ea.Body.ToArray();
+                var json = Encoding.UTF8.GetString(body);
+                try
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("command", out var commandEl)
+                        && commandEl.GetString() == "create"
+                        && root.TryGetProperty("data", out var dataEl))
+                    {
+                        // Processar dados dos sensores aqui
+                        // Exemplo: atualizar métricas Prometheus
 
+
+                        var umidade = dataEl.GetProperty("umidadeSolo").GetDouble();
+                        var temperatura = dataEl.GetProperty("temperatura").GetDouble();
+                        var precipitacao = dataEl.GetProperty("nivelPrecipitacao").GetDouble();
+                        var dataUltimaAtualizacao = dataEl.GetProperty("dataUltimaAtualizacao").GetDateTime();
+
+                        using var scope = _scopeFactory.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                        // Aqui você pode salvar os dados dos sensores no banco ou atualizar as métricas
+                        Console.WriteLine($"Dados dos sensores recebidos - Umidade: {umidade}, Temperatura: {temperatura}, Precipitação: {precipitacao}, Data: {dataUltimaAtualizacao}");
+                        var sensor = new Sensor
+                        {
+                            IdTalhao = dataEl.GetProperty("talhaoId").GetInt32(),
+                            UmidadeSolo = umidade,
+                            Temperatura = temperatura,
+                            NivelPrecipitacao = precipitacao,
+                            DataUltimaAtualizacao = dataUltimaAtualizacao
+                        };
+                        db.Sensor.Add(sensor);
+                        await db.SaveChangesAsync(stoppingToken);
+
+                        SensorMetrics.Temperatura
+                            .WithLabels(sensor.IdTalhao.ToString())
+                            .Set((double)sensor.Temperatura);
+
+                        SensorMetrics.Umidade
+                            .WithLabels(sensor.IdTalhao.ToString())
+                            .Set((double)sensor.UmidadeSolo);
+
+                        SensorMetrics.Precipitacao
+                            .WithLabels(sensor.IdTalhao.ToString())
+                            .Set((double)sensor.NivelPrecipitacao);
+
+                        Console.WriteLine($"Dados dos sensores salvos com ID: {sensor.Id} para talhão ID: {sensor.IdTalhao}");
+                    }
+                    await _channel.BasicAckAsync(ea.DeliveryTag, false);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao processar Sensores: {ex}");
+                    await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
+                }
+            };
+            #endregion
             await _channel.BasicConsumeAsync(
                 queue: QueuePropriedade,
                 autoAck: false,
@@ -156,6 +225,11 @@ namespace APIAgroCoreDados.Services
                 queue: QueueTalhao,
                 autoAck: false,
                 consumer: consumerTalhao);
+
+            await _channel.BasicConsumeAsync(
+                queue: QueueSensores,
+                autoAck: false,
+                consumer: consumerSensores);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }

@@ -1,6 +1,7 @@
 using APIAgroCoreDados.Data;
 using APIAgroCoreDados.Services;
 using Microsoft.EntityFrameworkCore;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,10 @@ builder.Services.AddSingleton<RabbitMqService>();
 builder.Services.AddHostedService<RabbitMqListener>();
 
 var app = builder.Build();
+
+app.UseHttpMetrics();
+
+app.MapMetrics();
 
 app.UseHttpsRedirection();
 
