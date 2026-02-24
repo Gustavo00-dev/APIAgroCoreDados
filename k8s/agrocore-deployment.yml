@@ -46,24 +46,6 @@ spec:
 
 ---
 # =========================
-# SERVICEMONITOR
-# =========================
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: api-agrocore-monitor
-  labels:
-    release: monitoring
-spec:
-  selector:
-    matchLabels:
-      app: agrocoredados
-  endpoints:
-    - port: http
-      path: /metrics
-      interval: 15s
----
-# =========================
 # INGRESS
 # =========================
 apiVersion: networking.k8s.io/v1
